@@ -11,14 +11,15 @@ from tweepy.streaming import StreamListener
 logger = logging.getLogger(__name__)
 
 # set formatter
-formatter = logging.Formatter(
+console_formatter = logging.Formatter('%(levelname)s -- %(message)s')
+file_formatter = logging.Formatter(
     '%(asctime)s — %(name)s — %(levelname)s — %(funcName)s:%(lineno)d — %(message)s')
 
 # define handler
 console_handler = logging.StreamHandler()
-console_handler.setFormatter(formatter)
+console_handler.setFormatter(console_formatter)
 file_handler = logging.FileHandler('twitter.log')
-file_handler.setFormatter(formatter)
+file_handler.setFormatter(file_formatter)
 
 # add handler to logger
 logger.addHandler(console_handler)
