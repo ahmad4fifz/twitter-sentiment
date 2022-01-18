@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -6,8 +7,26 @@ from textblob import TextBlob
 from tweepy import OAuthHandler, Stream
 from tweepy.streaming import StreamListener
 
+# create a logger
+logger = logging.getLogger(__name__)
+
+# set formatter
+formatter = logging.Formatter(
+    '%(asctime)s — %(name)s — %(levelname)s — %(funcName)s:%(lineno)d — %(message)s')
+
+# define handler
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(formatter)
+file_handler = logging.FileHandler('twitter.log')
+file_handler.setFormatter(formatter)
+
+# add handler to logger
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+
 # set the environment variables from .env file
 load_dotenv()
+logger.info('Environment variables loaded from .env file')
 
 
 class TweetStreamListener(StreamListener):
