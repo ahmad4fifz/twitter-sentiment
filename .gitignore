@@ -114,9 +114,3 @@ dmypy.json
 .pyre/
 
 .vscode/
-
-# Data persistance folder for MongoDB, Redis
-data/
-
-
-config.py
