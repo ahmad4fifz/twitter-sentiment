@@ -3,8 +3,9 @@ import logging
 import os
 
 from dotenv import load_dotenv
+from splunk_data_sender import SplunkSender
 from textblob import TextBlob
-from tweepy import OAuthHandler, Stream
+from tweepy import OAuthHandler, Stream, API
 from tweepy.streaming import StreamListener
 
 # create a logger
@@ -18,7 +19,7 @@ file_formatter = logging.Formatter(
 # define handler
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(console_formatter)
-file_handler = logging.FileHandler('twitter.log')
+file_handler = logging.FileHandler('app.log')
 file_handler.setFormatter(file_formatter)
 
 # add handler to logger
@@ -75,12 +76,23 @@ if __name__ == '__main__':
 
     # create instance of the tweepy tweet stream listener
     listener = TweetStreamListener()
+    logger.info('Creating a stream')
 
     # set twitter keys/tokens
     auth = OAuthHandler(os.getenv("TWITTER_CONSUMER_KEY"),
                         os.getenv("TWITTER_CONSUMER_SECRET"))
     auth.set_access_token(os.getenv("TWITTER_ACCESS_TOKEN"),
                           os.getenv("TWITTER_ACCESS_TOKEN_SECRET"))
+    logger.info('Twitter keys and tokens loaded.')
+
+    api = API(auth)
+
+    # try to authenticate with TwitterAPI
+    try:
+        api.verify_credentials()
+        print("Authentication OK")
+    except:
+        print("Error during authentication")
 
     # create instance of the tweepy stream
     stream = Stream(auth, listener)
