@@ -1,15 +1,9 @@
 import json
-from tweepy.streaming import StreamListener
-from tweepy import OAuthHandler
-from tweepy import Stream
+
+from dotenv import load_dotenv
 from textblob import TextBlob
-from elasticsearch import Elasticsearch
-
-# import twitter keys and tokens
-from config import *
-
-# create instance of elasticsearch
-es = Elasticsearch()
+from tweepy import OAuthHandler, Stream
+from tweepy.streaming import StreamListener
 
 
 class TweetStreamListener(StreamListener):
@@ -24,7 +18,7 @@ class TweetStreamListener(StreamListener):
         tweet = TextBlob(dict_data["text"])
 
         # output sentiment polarity
-        print tweet.sentiment.polarity
+        print(tweet.sentiment.polarity)
 
         # determine if sentiment is positive, negative, or neutral
         if tweet.sentiment.polarity < 0:
@@ -35,7 +29,7 @@ class TweetStreamListener(StreamListener):
             sentiment = "positive"
 
         # output sentiment
-        print sentiment
+        print(sentiment)
 
         # add text and sentiment info to elasticsearch
         es.index(index="sentiment",
@@ -50,7 +44,7 @@ class TweetStreamListener(StreamListener):
 
     # on failure
     def on_error(self, status):
-        print status
+        print(status)
 
 if __name__ == '__main__':
 
