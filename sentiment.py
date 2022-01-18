@@ -9,6 +9,7 @@ from tweepy.streaming import StreamListener
 # set the environment variables from .env file
 load_dotenv()
 
+
 class TweetStreamListener(StreamListener):
 
     # on success
@@ -49,14 +50,17 @@ class TweetStreamListener(StreamListener):
     def on_error(self, status):
         print(status)
 
+
 if __name__ == '__main__':
 
     # create instance of the tweepy tweet stream listener
     listener = TweetStreamListener()
 
     # set twitter keys/tokens
-    auth = OAuthHandler(consumer_key, consumer_secret)
-    auth.set_access_token(access_token, access_token_secret)
+    auth = OAuthHandler(os.getenv("TWITTER_CONSUMER_KEY"),
+                        os.getenv("TWITTER_CONSUMER_SECRET"))
+    auth.set_access_token(os.getenv("TWITTER_ACCESS_TOKEN"),
+                          os.getenv("TWITTER_ACCESS_TOKEN_SECRET"))
 
     # create instance of the tweepy stream
     stream = Stream(auth, listener)
