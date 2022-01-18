@@ -1,10 +1,13 @@
 import json
+import os
 
 from dotenv import load_dotenv
 from textblob import TextBlob
 from tweepy import OAuthHandler, Stream
 from tweepy.streaming import StreamListener
 
+# set the environment variables from .env file
+load_dotenv()
 
 class TweetStreamListener(StreamListener):
 
