@@ -44,8 +44,8 @@ splunk_conf = SplunkSender(
     index=os.getenv("SPLUNK_INDEX"),
     channel=os.getenv("SPLUNK_CHANNEL"),  # GUID
     api_version='0.1',
-    # hostname='hostname', # manually set a hostname parameter, defaults to socket.gethostname()
-    # source='source', # manually set a source, defaults to the log record.pathname
+    hostname='tweet-sentiment',
+    source='sentiment',
     # source_type='generic_single_line', # manually set a source_type, defaults to 'generic_single_line'
     # Whether to look for one of the Splunk built-in parameters(index, host, ecc)
     allow_overrides=True,
@@ -89,18 +89,36 @@ class TweetStreamListener(Stream):
         # output sentiment
         logger.info('Sentiment : ' + sentiment)
 
-        # connect to Splunk
-        s
+        # Splunk healthcheck
+        is_alive = splunk.get_health()
+        logging.info(is_alive)
+        if not is_alive:
+            logging.exception("Splunk HEC not alive")
+            raise
 
-        # add text and sentiment info to elasticsearch
-        es.index(index="sentiment",
-                 doc_type="test-type",
-                 body={"author": dict_data["user"]["screen_name"],
-                       "date": dict_data["created_at"],
-                       "message": dict_data["text"],
-                       "polarity": tweet.sentiment.polarity,
-                       "subjectivity": tweet.sentiment.subjectivity,
-                       "sentiment": sentiment})
+        # add text and sentiment info to Splunk
+        json_record = {  # this record will be parsed as normal text due to default "sourcetype" conf param
+            "source": "sentiment",
+            "host": "tweet-sentiment",
+            "sourcetype": "_json",
+            "index": "main",
+            "event": {"author": dict_data["user"]["screen_name"],
+                      "date": dict_data["created_at"],
+                      "message": dict_data["text"],
+                      "polarity": tweet.sentiment.polarity,
+                      "subjectivity": tweet.sentiment.subjectivity,
+                      "sentiment": sentiment
+                      }
+        }
+        payloads = [json_record]
+
+        splunk_res = splunk.send_data(payloads)
+        logging.info(splunk_res)
+
+        ack_id = splunk_res.get('ackId')
+        splunk_ack_res = splunk.send_acks(ack_id)
+        logging.info(splunk_ack_res)
+
         return True
 
     # on failure
@@ -146,6 +164,10 @@ if __name__ == '__main__':
     stream = Stream(auth, listener)
     logger.info('Instance for Tweepy stream created.')
 
-    # search twitter for keyword supply
+    # pass Splunk conf
+    splunk = SplunkSender(**splunk_conf)
+    logger.info('Splunk conf passed')
+
+    # search Twitter for keyword supply
     logger.info('Query: ' + args.string)
     stream.filter(track=[args.string])
