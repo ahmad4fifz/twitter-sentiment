@@ -46,9 +46,10 @@ class TweetStreamListener(Stream):
 
         # pass tweet into TextBlob
         tweet = TextBlob(dict_data["text"])
+        logger.info('Tweet pass to TextBlob')
 
         # output sentiment polarity
-        print(tweet.sentiment.polarity)
+        logger.info('Sentiment polarity: '+ tweet.sentiment.polarity)
 
         # determine if sentiment is positive, negative, or neutral
         if tweet.sentiment.polarity < 0:
@@ -59,7 +60,10 @@ class TweetStreamListener(Stream):
             sentiment = "positive"
 
         # output sentiment
-        print(sentiment)
+        logger.info('Sentiment : '+ sentiment)
+
+        # connect to Splunk
+        
 
         # add text and sentiment info to elasticsearch
         es.index(index="sentiment",
