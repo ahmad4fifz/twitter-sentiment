@@ -90,9 +90,9 @@ if __name__ == '__main__':
     # try to authenticate with TwitterAPI
     try:
         api.verify_credentials()
-        print("Authentication OK")
+        logger.info('Authentication sucess.')
     except:
-        print("Error during authentication")
+        logger.error("Error during authentication")
 
     # create instance of the tweepy stream
     stream = Stream(auth, listener)
