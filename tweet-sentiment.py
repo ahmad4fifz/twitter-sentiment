@@ -46,8 +46,7 @@ splunk_conf = SplunkSender(
     api_version='0.1',
     hostname='tweet-sentiment',
     source='sentiment',
-    # source_type='generic_single_line', # manually set a source_type, defaults to 'generic_single_line'
-    # Whether to look for one of the Splunk built-in parameters(index, host, ecc)
+    source_type='_json',
     allow_overrides=True,
     verify=False,  # turn SSL verification on or off, defaults to True
     # timeout=60, # timeout for waiting on a 200 OK from Splunk server, defaults to 60s
