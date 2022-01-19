@@ -53,7 +53,7 @@ splunk_conf = SplunkSender(
     # retry_count=5, # Number of retry attempts on a failed/erroring connection, defaults to 5
     # retry_backoff=2.0,  # Backoff factor, default options will retry for 1 min, defaults to 2.0
     # turn on debug mode; prints module activity to stdout, defaults to False
-    enable_debug=True,
+    # enable_debug=True,
 )
 
 
