@@ -37,6 +37,26 @@ access_token = os.getenv("TWITTER_ACCESS_TOKEN")
 access_token_secret = os.getenv("TWITTER_ACCESS_TOKEN_SECRET")
 bearer_token = os.getenv("TWITTER_BEARER_TOKEN")
 
+splunk_conf = SplunkSender(
+    endpoint=os.getenv("SPLUNK_ENDPOINT"),
+    port=os.getenv("SPLUNK_PORT"),
+    token=os.getenv("SPLUNK_HEC_TOKEN"),
+    index=os.getenv("SPLUNK_INDEX"),
+    channel=os.getenv("SPLUNK_CHANNEL"),  # GUID
+    api_version='0.1',
+    # hostname='hostname', # manually set a hostname parameter, defaults to socket.gethostname()
+    # source='source', # manually set a source, defaults to the log record.pathname
+    # source_type='generic_single_line', # manually set a source_type, defaults to 'generic_single_line'
+    # Whether to look for one of the Splunk built-in parameters(index, host, ecc)
+    allow_overrides=True,
+    verify=False,  # turn SSL verification on or off, defaults to True
+    # timeout=60, # timeout for waiting on a 200 OK from Splunk server, defaults to 60s
+    # retry_count=5, # Number of retry attempts on a failed/erroring connection, defaults to 5
+    # retry_backoff=2.0,  # Backoff factor, default options will retry for 1 min, defaults to 2.0
+    # turn on debug mode; prints module activity to stdout, defaults to False
+    enable_debug=True,
+)
+
 
 class includeSpacing(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
