@@ -2,11 +2,12 @@ import argparse
 import json
 import logging
 import os
+import sys
 
 from dotenv import load_dotenv
 from splunk_data_sender import SplunkSender
 from textblob import TextBlob
-from tweepy import API, OAuthHandler, Stream
+from tweepy import API, Client, OAuthHandler, Stream
 
 # create a logger
 logger = logging.getLogger(__name__)
@@ -30,6 +31,12 @@ logger.addHandler(file_handler)
 load_dotenv()
 logger.info('Environment variables loaded from .env file')
 
+consumer_key = os.getenv("TWITTER_CONSUMER_KEY")
+consumer_secret = os.getenv("TWITTER_CONSUMER_SECRET")
+access_token = os.getenv("TWITTER_ACCESS_TOKEN")
+access_token_secret = os.getenv("TWITTER_ACCESS_TOKEN_SECRET")
+bearer_token = os.getenv("TWITTER_BEARER_TOKEN")
+
 
 class includeSpacing(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
@@ -49,7 +56,7 @@ class TweetStreamListener(Stream):
         logger.info('Tweet pass to TextBlob')
 
         # output sentiment polarity
-        logger.info('Sentiment polarity: '+ tweet.sentiment.polarity)
+        logger.info('Sentiment polarity: ' + tweet.sentiment.polarity)
 
         # determine if sentiment is positive, negative, or neutral
         if tweet.sentiment.polarity < 0:
@@ -60,10 +67,10 @@ class TweetStreamListener(Stream):
             sentiment = "positive"
 
         # output sentiment
-        logger.info('Sentiment : '+ sentiment)
+        logger.info('Sentiment : ' + sentiment)
 
         # connect to Splunk
-        
+        s
 
         # add text and sentiment info to elasticsearch
         es.index(index="sentiment",
@@ -84,8 +91,10 @@ class TweetStreamListener(Stream):
 if __name__ == '__main__':
 
     # init display
-    parser = argparse.ArgumentParser(description='Twitter sentiment analysis using Python and Splunk.')
-    parser.add_argument('string', help='keyword(s) to query', nargs='+', action=includeSpacing)
+    parser = argparse.ArgumentParser(
+        description='Twitter sentiment analysis using Python and Splunk.')
+    parser.add_argument('string', help='keyword(s) to query',
+                        nargs='+', action=includeSpacing)
     args = parser.parse_args()
 
     # create instance of the tweepy tweet stream listener
@@ -93,13 +102,17 @@ if __name__ == '__main__':
     logger.info('Creating a stream')
 
     # set twitter keys/tokens
-    auth = OAuthHandler(os.getenv("TWITTER_CONSUMER_KEY"),
-                        os.getenv("TWITTER_CONSUMER_SECRET"))
-    auth.set_access_token(os.getenv("TWITTER_ACCESS_TOKEN"),
-                          os.getenv("TWITTER_ACCESS_TOKEN_SECRET"))
-    logger.info('Twitter keys and tokens loaded.')
-
-    api = API(auth, wait_on_rate_limit=True)
+    if bearer_token is None:
+        # Twitter API v1.1 Interface
+        auth = OAuthHandler(consumer_key, consumer_secret)
+        auth.set_access_token(access_token, access_token_secret)
+        api = API(auth, wait_on_rate_limit=True)
+        logger.info('Using 0Auth 1a authentication')
+    else:
+        # Twitter API v2 Client
+        auth = Client(bearer_token)
+        api = API(auth, wait_on_rate_limit=True)
+        logger.info('Using 0Auth 2 authentication')
 
     # try to authenticate with TwitterAPI
     try:
@@ -107,12 +120,12 @@ if __name__ == '__main__':
         logger.info('Authentication sucess.')
     except Exception as e:
         logger.exception("Error during authentication:\n%s" % e)
+        sys.exit(1)
 
     # create instance of the tweepy stream
     stream = Stream(auth, listener)
-    logger.info('Instance for Tweepy stream created.' + args.string)
+    logger.info('Instance for Tweepy stream created.')
 
     # search twitter for keyword supply
     logger.info('Query: ' + args.string)
     stream.filter(track=[args.string])
-    
