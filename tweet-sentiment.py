@@ -1,3 +1,4 @@
+import argparse
 import json
 import logging
 import os
@@ -5,8 +6,7 @@ import os
 from dotenv import load_dotenv
 from splunk_data_sender import SplunkSender
 from textblob import TextBlob
-from tweepy import OAuthHandler, Stream, API
-from tweepy.streaming import StreamListener
+from tweepy import API, OAuthHandler, Stream
 
 # create a logger
 logger = logging.getLogger(__name__)
@@ -31,7 +31,12 @@ load_dotenv()
 logger.info('Environment variables loaded from .env file')
 
 
-class TweetStreamListener(StreamListener):
+class includeSpacing(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, ' '.join(values))
+
+
+class TweetStreamListener(Stream):
 
     # on success
     def on_data(self, data):
@@ -69,10 +74,15 @@ class TweetStreamListener(StreamListener):
 
     # on failure
     def on_error(self, status):
-        print(status)
+        logging.error(status)
 
 
 if __name__ == '__main__':
+
+    # init display
+    parser = argparse.ArgumentParser(description='Twitter sentiment analysis using Python and Splunk.')
+    parser.add_argument('string', help='keyword(s) to query', nargs='+', action=includeSpacing)
+    args = parser.parse_args()
 
     # create instance of the tweepy tweet stream listener
     listener = TweetStreamListener()
@@ -85,17 +95,20 @@ if __name__ == '__main__':
                           os.getenv("TWITTER_ACCESS_TOKEN_SECRET"))
     logger.info('Twitter keys and tokens loaded.')
 
-    api = API(auth)
+    api = API(auth, wait_on_rate_limit=True)
 
     # try to authenticate with TwitterAPI
     try:
         api.verify_credentials()
         logger.info('Authentication sucess.')
-    except:
-        logger.error("Error during authentication")
+    except Exception as e:
+        logger.exception("Error during authentication:\n%s" % e)
 
     # create instance of the tweepy stream
     stream = Stream(auth, listener)
+    logger.info('Instance for Tweepy stream created.' + args.string)
 
-    # search twitter for "congress" keyword
-    stream.filter(track=['congress'])
+    # search twitter for keyword supply
+    logger.info('Query: ' + args.string)
+    stream.filter(track=[args.string])
+    
