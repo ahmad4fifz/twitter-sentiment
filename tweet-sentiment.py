@@ -23,6 +23,9 @@ console_handler.setFormatter(console_formatter)
 file_handler = logging.FileHandler('app.log')
 file_handler.setFormatter(file_formatter)
 
+# define log level
+logger.setLevel("DEBUG")
+
 # add handler to logger
 logger.addHandler(console_handler)
 logger.addHandler(file_handler)
@@ -110,6 +113,7 @@ class TweetStreamListener(Stream):
                       }
         }
         payloads = [json_record]
+        logging.info(payloads)
 
         splunk_res = splunk.send_data(payloads)
         logging.info(splunk_res)
