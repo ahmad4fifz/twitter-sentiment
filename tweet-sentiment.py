@@ -138,39 +138,30 @@ if __name__ == '__main__':
                         nargs='+', action=includeSpacing)
     args = parser.parse_args()
 
-    # create instance of the tweepy tweet stream listener
-    listener = TweetStreamListener()
-    logger.info('Creating a stream')
-
     # set twitter keys/tokens
-    if bearer_token is None:
-        # Twitter API v1.1 Interface
-        auth = OAuthHandler(consumer_key, consumer_secret)
-        auth.set_access_token(access_token, access_token_secret)
-        api = API(auth, wait_on_rate_limit=True)
-        logger.info('Using 0Auth 1a authentication')
-    else:
-        # Twitter API v2 Client
-        auth = Client(bearer_token)
-        api = API(auth, wait_on_rate_limit=True)
-        logger.info('Using 0Auth 2 authentication')
+    auth = OAuthHandler(consumer_key, consumer_secret)
+    auth.set_access_token(access_token, access_token_secret)
+    api = API(auth, wait_on_rate_limit=True)
+    logger.info('Using 0Auth 1a authentication')
 
     # try to authenticate with TwitterAPI
     try:
         api.verify_credentials()
         logger.info('Authentication sucess.')
+
+        # create instance of the tweepy stream
+        stream = TweetStreamListener(
+            consumer_key, consumer_secret, access_token, access_token_secret)
+        logger.info('Instance for Tweepy stream created.')
+
+        # pass Splunk conf
+        splunk = SplunkSender(**splunk_conf)
+        logger.info('Splunk conf passed')
+
+        # search Twitter for keyword supply
+        logger.info('Query: ' + args.string)
+        stream.filter(track=[args.string])
+
     except Exception as e:
         logger.exception("Error during authentication:\n%s" % e)
         sys.exit(1)
-
-    # create instance of the tweepy stream
-    stream = Stream(auth, listener)
-    logger.info('Instance for Tweepy stream created.')
-
-    # pass Splunk conf
-    splunk = SplunkSender(**splunk_conf)
-    logger.info('Splunk conf passed')
-
-    # search Twitter for keyword supply
-    logger.info('Query: ' + args.string)
-    stream.filter(track=[args.string])
