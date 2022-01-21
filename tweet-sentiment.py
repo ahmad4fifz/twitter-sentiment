@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import sys
+import malaya
 
 from dotenv import load_dotenv
 from splunk_data_sender import SplunkSender
@@ -59,6 +60,11 @@ splunk_conf = SplunkSender(
     # enable_debug=True,
 )
 
+# declare malaya 
+corrector = malaya.spell.probability()
+normalizer=malaya.normalize.normalizer(corrector)
+transformer = malaya.translation.ms_en.transformer()
+
 
 class includeSpacing(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
@@ -77,52 +83,71 @@ class TweetStreamListener(Stream):
         tweet = TextBlob(dict_data["text"])
         logger.info('Tweet pass to TextBlob')
 
-        # output sentiment polarity
-        logger.info('Sentiment polarity: ' + tweet.sentiment.polarity)
+        # only take non-retweeted status
+        if 'retweeted_status' not in dict_data:
+            tweet = TextBlob(dict_data["text"])
+            
+            
+            # normalized text,translate from MS to EN
+            normalized= normalizer.normalize(str (tweet))
+            normalized_extract= normalized.get('normalize')
+            translated=transformer.greedy_decoder([str(normalized_extract)])
+            normalized_translated=''.join(translated)
 
-        # determine if sentiment is positive, negative, or neutral
-        if tweet.sentiment.polarity < 0:
-            sentiment = "negative"
-        elif tweet.sentiment.polarity == 0:
-            sentiment = "neutral"
-        else:
-            sentiment = "positive"
+            # add new KV with "text_translated" at the json 
+            json_add= {"text_translated": normalized_translated}
+            dict_data.update(json_add)
 
-        # output sentiment
-        logger.info('Sentiment : ' + sentiment)
+            # redeclare tweet with EN text
+            tweet = TextBlob(dict_data["text_translated"])
 
-        # Splunk healthcheck
-        is_alive = splunk.get_health()
-        logging.info(is_alive)
-        if not is_alive:
-            logging.exception("Splunk HEC not alive")
-            raise
+            # output sentiment polarity
+            logger.info('Sentiment polarity: ' + tweet.sentiment.polarity)
 
-        # add text and sentiment info to Splunk
-        json_record = {  # this record will be parsed as normal text due to default "sourcetype" conf param
-            "source": "sentiment",
-            "host": "tweet-sentiment",
-            "sourcetype": "_json",
-            "index": "main",
-            "event": {"author": dict_data["user"]["screen_name"],
-                      "date": dict_data["created_at"],
-                      "message": dict_data["text"],
-                      "polarity": tweet.sentiment.polarity,
-                      "subjectivity": tweet.sentiment.subjectivity,
-                      "sentiment": sentiment
-                      }
-        }
-        payloads = [json_record]
-        logging.info(payloads)
+            # determine if sentiment is positive, negative, or neutral
+            if tweet.sentiment.polarity < 0:
+                sentiment = "negative"
+            elif tweet.sentiment.polarity == 0:
+                sentiment = "neutral"
+            else:
+                sentiment = "positive"
 
-        splunk_res = splunk.send_data(payloads)
-        logging.info(splunk_res)
+            # output sentiment
+            logger.info('Sentiment : ' + sentiment)
 
-        ack_id = splunk_res.get('ackId')
-        splunk_ack_res = splunk.send_acks(ack_id)
-        logging.info(splunk_ack_res)
+            # Splunk healthcheck
+            is_alive = splunk.get_health()
+            logging.info(is_alive)
+            if not is_alive:
+                logging.exception("Splunk HEC not alive")
+                raise
 
-        return True
+            # add text and sentiment info to Splunk
+            json_record = {  # this record will be parsed as normal text due to default "sourcetype" conf param
+                "source": "sentiment",
+                "host": "tweet-sentiment",
+                "sourcetype": "_json",
+                "index": "main",
+                "event": {"author": dict_data["user"]["screen_name"],
+                        "date": dict_data["created_at"],
+                        "message": dict_data["text"],
+                        "translated_message": dict_data["text_translated"]
+                        "polarity": tweet.sentiment.polarity,
+                        "subjectivity": tweet.sentiment.subjectivity,
+                        "sentiment": sentiment
+                        }
+            }
+            payloads = [json_record]
+            logging.info(payloads)
+
+            splunk_res = splunk.send_data(payloads)
+            logging.info(splunk_res)
+
+            ack_id = splunk_res.get('ackId')
+            splunk_ack_res = splunk.send_acks(ack_id)
+            logging.info(splunk_ack_res)
+
+            return True
 
     # on failure
     def on_error(self, status):
