@@ -17,3 +17,4 @@ toml==0.10.2
 tqdm==4.62.3
 tweepy==4.4.0
 urllib3==1.26.8
+malaya==4.7.1
