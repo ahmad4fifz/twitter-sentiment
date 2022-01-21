@@ -131,7 +131,7 @@ class TweetStreamListener(Stream):
                 "event": {"author": dict_data["user"]["screen_name"],
                         "date": dict_data["created_at"],
                         "message": dict_data["text"],
-                        "translated_message": dict_data["text_translated"]
+                        "translated_message": dict_data["text_translated"],
                         "polarity": tweet.sentiment.polarity,
                         "subjectivity": tweet.sentiment.subjectivity,
                         "sentiment": sentiment
