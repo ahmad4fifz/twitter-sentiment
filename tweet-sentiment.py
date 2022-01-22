@@ -77,7 +77,6 @@ class TweetStreamListener(Stream):
             # remove unicode
             tweet_unicode_removal=''.join([i if ord(i) < 128 else ' ' for i in tweet])
             tweet=tweet_unicode_removal
-            print(tweet)
 
             # normalized text,translate from MS to EN
             normalized= normalizer.normalize(str (tweet))
