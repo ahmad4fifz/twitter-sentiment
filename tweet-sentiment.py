@@ -151,7 +151,8 @@ if __name__ == '__main__':
     api = API(auth, wait_on_rate_limit=True)
     logger.info('Using 0Auth 1a authentication')
 
-
+    path="output"
+    os.makedirs(path, exist_ok=True) 
     filename="output/"+args.string+".json"
 
 
