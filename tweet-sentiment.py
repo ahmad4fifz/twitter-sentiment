@@ -45,7 +45,7 @@ bearer_token = os.getenv("TWITTER_BEARER_TOKEN")
 # declare malaya 
 corrector = malaya.spell.probability()
 normalizer=malaya.normalize.normalizer(corrector)
-transformer = malaya.translation.ms_en.transformer()
+transformer = malaya.translation.ms_en.transformer(model='large')
 
 
 class includeSpacing(argparse.Action):
@@ -74,6 +74,11 @@ class TweetStreamListener(Stream):
             if 'extended_tweet' in dict_data:
                 tweet=TextBlob(dict_data["extended_tweet"]["full_text"])
             
+            # remove unicode
+            tweet_unicode_removal=''.join([i if ord(i) < 128 else ' ' for i in tweet])
+            tweet=tweet_unicode_removal
+            print(tweet)
+
             # normalized text,translate from MS to EN
             normalized= normalizer.normalize(str (tweet))
             normalized_extract= normalized.get('normalize')
