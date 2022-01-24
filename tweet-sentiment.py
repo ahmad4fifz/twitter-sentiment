@@ -39,12 +39,11 @@ consumer_key = os.getenv("TWITTER_CONSUMER_KEY")
 consumer_secret = os.getenv("TWITTER_CONSUMER_SECRET")
 access_token = os.getenv("TWITTER_ACCESS_TOKEN")
 access_token_secret = os.getenv("TWITTER_ACCESS_TOKEN_SECRET")
-bearer_token = os.getenv("TWITTER_BEARER_TOKEN")
 
 
-# declare malaya 
+# declare malaya
 corrector = malaya.spell.probability()
-normalizer=malaya.normalize.normalizer(corrector)
+normalizer = malaya.normalize.normalizer(corrector)
 transformer = malaya.translation.ms_en.transformer(model='large')
 
 
@@ -60,33 +59,33 @@ class TweetStreamListener(Stream):
 
         # decode json
         dict_data = json.loads(data)
-        print(dict_data)
+        # print(dict_data)
 
         # pass tweet into TextBlob
         tweet = TextBlob(dict_data["text"])
-        
 
         # only take non-retweeted status
         if 'retweeted_status' not in dict_data:
             tweet = TextBlob(dict_data["text"])
             logger.info('Tweet pass to TextBlob')
-            
+
             # check full tweet
             if 'extended_tweet' in dict_data:
-                tweet=TextBlob(dict_data["extended_tweet"]["full_text"])
-            
+                tweet = TextBlob(dict_data["extended_tweet"]["full_text"])
+
             # remove unicode
-            tweet_unicode_removal=''.join([i if ord(i) < 128 else ' ' for i in tweet])
-            tweet=tweet_unicode_removal
+            tweet_unicode_removal = ''.join(
+                [i if ord(i) < 128 else ' ' for i in tweet])
+            tweet = tweet_unicode_removal
 
             # normalized text,translate from MS to EN
-            normalized= normalizer.normalize(str (tweet))
-            normalized_extract= normalized.get('normalize')
-            translated=transformer.greedy_decoder([str(normalized_extract)])
-            normalized_translated=''.join(translated)
+            normalized = normalizer.normalize(str(tweet))
+            normalized_extract = normalized.get('normalize')
+            translated = transformer.greedy_decoder([str(normalized_extract)])
+            normalized_translated = ''.join(translated)
 
-            # add new KV with "text_translated" at the json 
-            json_add= {"text_translated": normalized_translated}
+            # add new KV with "text_translated" at the json
+            json_add = {"text_translated": normalized_translated}
             dict_data.update(json_add)
 
             # redeclare tweet with EN text for sentiment analysis
@@ -106,7 +105,6 @@ class TweetStreamListener(Stream):
             # output sentiment
             logger.info('Sentiment : ' + sentiment)
 
-
             # add text and sentiment info to Splunk
             json_record = { 
                 "event": {"author": dict_data["user"]["screen_name"],
@@ -124,10 +122,7 @@ class TweetStreamListener(Stream):
             
             # creating json file in output folder
             mode='a' if os.path.exists(filename)  else 'w'
-
             with open(filename,mode) as writing:
-                
-                
                 json.dump(json_record, writing, indent=2)
 
             return True
@@ -152,10 +147,9 @@ if __name__ == '__main__':
     api = API(auth, wait_on_rate_limit=True)
     logger.info('Using 0Auth 1a authentication')
 
-    path="output"
-    os.makedirs(path, exist_ok=True) 
-    filename="output/"+args.string+".json"
-
+    path = "output"
+    os.makedirs(path, exist_ok=True)
+    filename = "output/"+args.string+".json"
 
     # try to authenticate with TwitterAPI
     try:
