@@ -60,6 +60,7 @@ class TweetStreamListener(Stream):
 
         # decode json
         dict_data = json.loads(data)
+        print(dict_data)
 
         # pass tweet into TextBlob
         tweet = TextBlob(dict_data["text"])
@@ -107,31 +108,27 @@ class TweetStreamListener(Stream):
 
 
             # add text and sentiment info to Splunk
-            json_record = {  # this record will be parsed as normal text due to default "sourcetype" conf param
+            json_record = { 
                 "event": {"author": dict_data["user"]["screen_name"],
                         "date": dict_data["created_at"],
                         "message": dict_data["text"],
                         "translated_message": dict_data["text_translated"],
+                        "hashtag":dict_data["entities"]["hashtags"],
                         "polarity": tweet.sentiment.polarity,
                         "subjectivity": tweet.sentiment.subjectivity,
                         "sentiment": sentiment
                         }
             }
-
             
-            payloads = [json_record]
-            # payloads_json=json.dump(payloads)
-            logging.info(payloads)
             
-                # creating json file in output folder
             
+            # creating json file in output folder
             mode='a' if os.path.exists(filename)  else 'w'
 
             with open(filename,mode) as writing:
                 
-                # json.dump(json_record, writing, indent=4)
+                
                 json.dump(json_record, writing, indent=2)
-                # writing.write(payloads_json)
 
             return True
 
