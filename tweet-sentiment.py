@@ -39,31 +39,12 @@ consumer_key = os.getenv("TWITTER_CONSUMER_KEY")
 consumer_secret = os.getenv("TWITTER_CONSUMER_SECRET")
 access_token = os.getenv("TWITTER_ACCESS_TOKEN")
 access_token_secret = os.getenv("TWITTER_ACCESS_TOKEN_SECRET")
-bearer_token = os.getenv("TWITTER_BEARER_TOKEN")
 
-splunk_conf = SplunkSender(
-    endpoint=os.getenv("SPLUNK_ENDPOINT"),
-    port=os.getenv("SPLUNK_PORT"),
-    token=os.getenv("SPLUNK_HEC_TOKEN"),
-    index='main',
-    channel=os.getenv("SPLUNK_CHANNEL"),  # GUID
-    api_version='0.1',
-    hostname='tweet-sentiment',
-    source='sentiment',
-    source_type='_json',
-    allow_overrides=True,
-    verify=False,  # turn SSL verification on or off, defaults to True
-    # timeout=60, # timeout for waiting on a 200 OK from Splunk server, defaults to 60s
-    # retry_count=5, # Number of retry attempts on a failed/erroring connection, defaults to 5
-    # retry_backoff=2.0,  # Backoff factor, default options will retry for 1 min, defaults to 2.0
-    # turn on debug mode; prints module activity to stdout, defaults to False
-    # enable_debug=True,
-)
 
-# declare malaya 
+# declare malaya
 corrector = malaya.spell.probability()
-normalizer=malaya.normalize.normalizer(corrector)
-transformer = malaya.translation.ms_en.transformer()
+normalizer = malaya.normalize.normalizer(corrector)
+transformer = malaya.translation.ms_en.transformer(model='large')
 
 
 class includeSpacing(argparse.Action):
@@ -81,28 +62,36 @@ class TweetStreamListener(Stream):
 
         # pass tweet into TextBlob
         tweet = TextBlob(dict_data["text"])
-        logger.info('Tweet pass to TextBlob')
 
         # only take non-retweeted status
         if 'retweeted_status' not in dict_data:
             tweet = TextBlob(dict_data["text"])
-            
-            
-            # normalized text,translate from MS to EN
-            normalized= normalizer.normalize(str (tweet))
-            normalized_extract= normalized.get('normalize')
-            translated=transformer.greedy_decoder([str(normalized_extract)])
-            normalized_translated=''.join(translated)
+            logger.info('Tweet pass to TextBlob')
 
-            # add new KV with "text_translated" at the json 
-            json_add= {"text_translated": normalized_translated}
+            # check full tweet
+            if 'extended_tweet' in dict_data:
+                tweet = TextBlob(dict_data["extended_tweet"]["full_text"])
+
+            # remove unicode
+            tweet_unicode_removal = ''.join(
+                [i if ord(i) < 128 else ' ' for i in tweet])
+            tweet = tweet_unicode_removal
+
+            # normalized text,translate from MS to EN
+            normalized = normalizer.normalize(str(tweet))
+            normalized_extract = normalized.get('normalize')
+            translated = transformer.greedy_decoder([str(normalized_extract)])
+            normalized_translated = ''.join(translated)
+
+            # add new KV with "text_translated" at the json
+            json_add = {"text_translated": normalized_translated}
             dict_data.update(json_add)
 
-            # redeclare tweet with EN text
+            # redeclare tweet with EN text for sentiment analysis
             tweet = TextBlob(dict_data["text_translated"])
 
             # output sentiment polarity
-            logger.info('Sentiment polarity: ' + tweet.sentiment.polarity)
+            logger.info('Sentiment polarity: ' + str(tweet.sentiment.polarity))
 
             # determine if sentiment is positive, negative, or neutral
             if tweet.sentiment.polarity < 0:
@@ -115,37 +104,31 @@ class TweetStreamListener(Stream):
             # output sentiment
             logger.info('Sentiment : ' + sentiment)
 
-            # Splunk healthcheck
-            is_alive = splunk.get_health()
-            logging.info(is_alive)
-            if not is_alive:
-                logging.exception("Splunk HEC not alive")
-                raise
-
             # add text and sentiment info to Splunk
             json_record = {  # this record will be parsed as normal text due to default "sourcetype" conf param
-                "source": "sentiment",
-                "host": "tweet-sentiment",
-                "sourcetype": "_json",
-                "index": "main",
                 "event": {"author": dict_data["user"]["screen_name"],
-                        "date": dict_data["created_at"],
-                        "message": dict_data["text"],
-                        "translated_message": dict_data["text_translated"],
-                        "polarity": tweet.sentiment.polarity,
-                        "subjectivity": tweet.sentiment.subjectivity,
-                        "sentiment": sentiment
-                        }
+                          "date": dict_data["created_at"],
+                          "message": dict_data["text"],
+                          "translated_message": dict_data["text_translated"],
+                          "polarity": tweet.sentiment.polarity,
+                          "subjectivity": tweet.sentiment.subjectivity,
+                          "sentiment": sentiment
+                          }
             }
+
             payloads = [json_record]
+            # payloads_json=json.dump(payloads)
             logging.info(payloads)
 
-            splunk_res = splunk.send_data(payloads)
-            logging.info(splunk_res)
+            # creating json file in output folder
 
-            ack_id = splunk_res.get('ackId')
-            splunk_ack_res = splunk.send_acks(ack_id)
-            logging.info(splunk_ack_res)
+            mode = 'a' if os.path.exists(filename) else 'w'
+
+            with open(filename, mode) as writing:
+
+                # json.dump(json_record, writing, indent=4)
+                json.dump(json_record, writing, indent=2)
+                # writing.write(payloads_json)
 
             return True
 
@@ -169,6 +152,10 @@ if __name__ == '__main__':
     api = API(auth, wait_on_rate_limit=True)
     logger.info('Using 0Auth 1a authentication')
 
+    path = "output"
+    os.makedirs(path, exist_ok=True)
+    filename = "output/"+args.string+".json"
+
     # try to authenticate with TwitterAPI
     try:
         api.verify_credentials()
@@ -178,10 +165,6 @@ if __name__ == '__main__':
         stream = TweetStreamListener(
             consumer_key, consumer_secret, access_token, access_token_secret)
         logger.info('Instance for Tweepy stream created.')
-
-        # pass Splunk conf
-        splunk = SplunkSender(**splunk_conf)
-        logger.info('Splunk conf passed')
 
         # search Twitter for keyword supply
         logger.info('Query: ' + args.string)
