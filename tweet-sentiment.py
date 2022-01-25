@@ -151,6 +151,9 @@ if __name__ == '__main__':
     os.makedirs(path, exist_ok=True)
     filename = "output/"+args.string+".json"
 
+    # put your country as geolocation, online-Tool to create boxes (c+p as raw CSV): http://boundingbox.klokantech.com/
+    GEOBOX_MALAYSIA= [98.93721438,0.85382093,119.43908752,7.51119883]
+
     # try to authenticate with TwitterAPI
     try:
         api.verify_credentials()
@@ -163,7 +166,7 @@ if __name__ == '__main__':
 
         # search Twitter for keyword supply
         logger.info('Query: ' + args.string)
-        stream.filter(track=[args.string])
+        stream.filter(track=[args.string],locations=GEOBOX_MALAYSIA)
 
     except Exception as e:
         logger.exception("Error during authentication:\n%s" % e)
