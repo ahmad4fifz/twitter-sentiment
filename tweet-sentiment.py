@@ -106,23 +106,21 @@ class TweetStreamListener(Stream):
             logger.info('Sentiment : ' + sentiment)
 
             # add text and sentiment info to Splunk
-            json_record = { 
+            json_record = {
                 "event": {"author": dict_data["user"]["screen_name"],
-                        "date": dict_data["created_at"],
-                        "message": dict_data["text"],
-                        "translated_message": dict_data["text_translated"],
-                        "hashtag":dict_data["entities"]["hashtags"],
-                        "polarity": tweet.sentiment.polarity,
-                        "subjectivity": tweet.sentiment.subjectivity,
-                        "sentiment": sentiment
-                        }
+                          "date": dict_data["created_at"],
+                          "message": dict_data["text"],
+                          "translated_message": dict_data["text_translated"],
+                          "hashtag": dict_data["entities"]["hashtags"],
+                          "polarity": tweet.sentiment.polarity,
+                          "subjectivity": tweet.sentiment.subjectivity,
+                          "sentiment": sentiment
+                          }
             }
-            
-            
-            
+
             # creating json file in output folder
-            mode='a' if os.path.exists(filename)  else 'w'
-            with open(filename,mode) as writing:
+            mode = 'a' if os.path.exists(filename) else 'w'
+            with open(filename, mode) as writing:
                 json.dump(json_record, writing, indent=2)
 
             return True
@@ -152,7 +150,7 @@ if __name__ == '__main__':
     filename = "output/"+args.string+".json"
 
     # put your country as geolocation, online-Tool to create boxes (c+p as raw CSV): http://boundingbox.klokantech.com/
-    GEOBOX_MALAYSIA= [98.93721438,0.85382093,119.43908752,7.51119883]
+    GEOBOX_MALAYSIA = [98.93721438, 0.85382093, 119.43908752, 7.51119883]
 
     # try to authenticate with TwitterAPI
     try:
@@ -166,7 +164,7 @@ if __name__ == '__main__':
 
         # search Twitter for keyword supply
         logger.info('Query: ' + args.string)
-        stream.filter(track=[args.string],locations=GEOBOX_MALAYSIA)
+        stream.filter(track=[args.string], locations=GEOBOX_MALAYSIA)
 
     except Exception as e:
         logger.exception("Error during authentication:\n%s" % e)
