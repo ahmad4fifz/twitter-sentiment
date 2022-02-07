@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import malaya
+import gc
 
 from dotenv import load_dotenv
 from splunk_data_sender import SplunkSender
@@ -124,6 +125,12 @@ class TweetStreamListener(Stream):
             mode='a' if os.path.exists(filename)  else 'w'
             with open(filename,mode) as writing:
                 json.dump(json_record, writing, indent=2)
+
+            # delete unused memory, garbage collecion
+            del json_record
+            del tweet
+            gc.collect
+
 
             return True
 
